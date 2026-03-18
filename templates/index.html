@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- ── Page header ──────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-5">
+  <div>
+    <h1 class="fw-bold mb-2" style="font-size: 2.5rem; background: linear-gradient(135deg, #00d4ff, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">My Tasks</h1>
+    <p class="mb-0" style="color: rgba(255, 255, 255, 0.6);">Manage and track your assignments</p>
+  </div>
+  <a href="{{ url_for('add_task') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-2"></i>Add Task
+  </a>
+</div>
+
+{% if tasks %}
+
+  <!-- ── Summary stats ──────────────────────────────────────── -->
+  <div class="row g-3 mb-5">
+
+    <div class="col-md-4">
+      <div class="stat-card card border-0 h-100">
+        <div class="card-body py-4">
+          <div class="stat-number">{{ tasks | length }}</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="stat-card card border-0 h-100">
+        <div class="card-body py-4">
+          <div class="stat-number">
+            {{ tasks | selectattr('completed') | list | length }}
+          </div>
+          <div class="stat-label">Completed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="stat-card card border-0 h-100">
+        <div class="card-body py-4">
+          <div class="stat-number">
+            {{ tasks | rejectattr('completed') | list | length }}
+          </div>
+          <div class="stat-label">In Progress</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Task cards grid ────────────────────────────────────── -->
+  <div class="row g-3">
+    {% for task in tasks %}
+
+      {# Card accent colour based on state #}
+      {% if task.completed %}
+        {% set card_color = '#4caf50' %}
+      {% elif task.is_overdue %}
+        {% set card_color = '#ff4d4d' %}
+      {% elif task.is_due_today %}
+        {% set card_color = '#ffc107' %}
+      {% else %}
+        {% set card_color = '#00d4ff' %}
+      {% endif %}
+
+    <div class="col-md-6 col-lg-4">
+      <div class="task-card card h-100 border-0" style="--card-color: {{ card_color }}" {{ 'data-completed' if task.completed else ('data-overdue' if task.is_overdue else '') }}">
+        <div class="card-body d-flex flex-column gap-3 p-4">
+
+          <!-- Top row: title + status badge -->
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <h6 class="card-title fw-bold mb-0 flex-grow-1 {{ 'text-decoration-line-through' if task.completed else ('text-danger' if task.is_overdue else '') }}">
+              {{ task.title }}
+            </h6>
+
+            <!-- Status badge -->
+            {% if task.completed %}
+              <span class="badge">
+                <i class="bi bi-check-circle me-1"></i>Done
+              </span>
+            {% elif task.is_overdue %}
+              <span class="badge">
+                <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+              </span>
+            {% elif task.is_due_today %}
+              <span class="badge">
+                <i class="bi bi-lightning me-1"></i>Today
+              </span>
+            {% else %}
+              <span class="badge">
+                <i class="bi bi-hourglass-split me-1"></i>Pending
+              </span>
+            {% endif %}
+          </div>
+
+          <!-- Description -->
+          {% if task.description %}
+            <p class="card-text text-muted small mb-0">{{ task.description }}</p>
+          {% endif %}
+
+          <!-- Deadline -->
+          <div class="mt-auto pt-2">
+            {% if task.deadline %}
+              {% if task.is_overdue %}
+                <small class="d-block fw-bold" style="color: #ff4d4d;">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ task.deadline.strftime('%d %b %Y') }}
+                </small>
+                <small style="color: #ff4d4d; font-weight: 600;">⚠️ Overdue</small>
+              {% elif task.is_due_today %}
+                <small class="d-block fw-bold" style="color: #ffc107;">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ task.deadline.strftime('%d %b %Y') }}
+                </small>
+                <small style="color: #ffc107; font-weight: 600;">📌 Due Today!</small>
+              {% else %}
+                <small class="d-block" style="color: rgba(255, 255, 255, 0.6);">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ task.deadline.strftime('%d %b %Y') }}
+                </small>
+              {% endif %}
+            {% else %}
+              <small style="color: rgba(255, 255, 255, 0.5);">
+                <i class="bi bi-calendar-x me-1"></i>No deadline
+              </small>
+            {% endif %}
+          </div>
+
+          <!-- Action buttons -->
+          <div class="d-flex gap-2 pt-3" style="border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <a
+              href="{{ url_for('complete_task', task_id=task.id) }}"
+              class="btn btn-sm btn-outline-success flex-grow-1"
+              title="{{ 'Undo' if task.completed else 'Mark complete' }}"
+            >
+              <i class="bi {{ 'bi-arrow-counterclockwise' if task.completed else 'bi-check-lg' }} me-1"></i>
+              {{ 'Undo' if task.completed else 'Complete' }}
+            </a>
+            <a
+              href="{{ url_for('delete_task', task_id=task.id) }}"
+              class="btn btn-sm btn-outline-danger"
+              title="Delete"
+              onclick="return confirm('Delete: {{ task.title }}?')"
+            >
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {% endfor %}
+  </div>
+
+{% else %}
+
+  <!-- ── Empty state ────────────────────────────────────────── -->
+  <div class="empty-state text-center py-5 my-4">
+    <div class="empty-icon mb-4">
+      <i class="bi bi-inbox"></i>
+    </div>
+    <h4 class="fw-bold mb-2">No tasks yet</h4>
+    <p class="mb-4">Add your first task to get started.</p>
+    <a href="{{ url_for('add_task') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-2"></i>Create Your First Task
+    </a>
+  </div>
+
+{% endif %}
+
+{% endblock %}
